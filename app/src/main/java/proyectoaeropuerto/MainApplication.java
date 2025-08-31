@@ -10,13 +10,13 @@ import java.io.IOException;
 public class MainApplication extends Application {
     @Override
     public void start(Stage stage) throws IOException {
-        // Carga el archivo FXML que define la interfaz
+        // Carga del archivo FXML con la interfaz
         FXMLLoader fxmlLoader = new FXMLLoader(MainApplication.class.getResource("main-view.fxml"));
         
         // Crea la escena con el contenido del FXML
-        Scene scene = new Scene(fxmlLoader.load(), 1200, 800); // Ancho y alto inicial
+        Scene scene = new Scene(fxmlLoader.load(), 1200, 800);
         
-        // Configura y muestra la ventana principal (el "Stage")
+        // Configura y muestra la ventana principal
         stage.setTitle("Gestor de Vuelos del Aeropuerto");
         stage.setScene(scene);
         stage.show();

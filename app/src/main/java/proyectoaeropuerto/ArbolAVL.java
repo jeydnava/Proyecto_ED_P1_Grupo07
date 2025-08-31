@@ -51,14 +51,14 @@ public class ArbolAVL<T extends Comparable<T>> {
     }
 
     public void insertar(T data) {
-        raiz = insertarRec(raiz, data);
+        raiz = insertarRecursivo(raiz, data);
     }
 
-    private NodoAVL insertarRec(NodoAVL nodo, T data) {
+    private NodoAVL insertarRecursivo(NodoAVL nodo, T data) {
         if (nodo == null) return new NodoAVL(data);
         int cmp = comparador.compare(data, nodo.data);
-        if (cmp < 0) nodo.izquierdo = insertarRec(nodo.izquierdo, data);
-        else if (cmp > 0) nodo.derecho = insertarRec(nodo.derecho, data);
+        if (cmp < 0) nodo.izquierdo = insertarRecursivo(nodo.izquierdo, data);
+        else if (cmp > 0) nodo.derecho = insertarRecursivo(nodo.derecho, data);
         else return nodo;
 
         nodo.altura = 1 + Math.max(altura(nodo.izquierdo), altura(nodo.derecho));
@@ -78,33 +78,33 @@ public class ArbolAVL<T extends Comparable<T>> {
     }
 
     public T buscar(T dataKey) {
-        NodoAVL nodo = buscarRec(raiz, dataKey);
+        NodoAVL nodo = buscarRecursivo(raiz, dataKey);
         return (nodo != null) ? nodo.data : null;
     }
 
-    private NodoAVL buscarRec(NodoAVL nodo, T dataKey) {
+    private NodoAVL buscarRecursivo(NodoAVL nodo, T dataKey) {
         if (nodo == null) return null;
         int cmp = comparador.compare(dataKey, nodo.data);
         if (cmp == 0) return nodo;
-        return cmp < 0 ? buscarRec(nodo.izquierdo, dataKey) : buscarRec(nodo.derecho, dataKey);
+        return cmp < 0 ? buscarRecursivo(nodo.izquierdo, dataKey) : buscarRecursivo(nodo.derecho, dataKey);
     }
 
     public void eliminar(T data) {
-        raiz = eliminarRec(raiz, data);
+        raiz = eliminarRecursivo(raiz, data);
     }
 
-    private NodoAVL eliminarRec(NodoAVL nodo, T data) {
+    private NodoAVL eliminarRecursivo(NodoAVL nodo, T data) {
         if (nodo == null) return null;
         int cmp = comparador.compare(data, nodo.data);
-        if (cmp < 0) nodo.izquierdo = eliminarRec(nodo.izquierdo, data);
-        else if (cmp > 0) nodo.derecho = eliminarRec(nodo.derecho, data);
+        if (cmp < 0) nodo.izquierdo = eliminarRecursivo(nodo.izquierdo, data);
+        else if (cmp > 0) nodo.derecho = eliminarRecursivo(nodo.derecho, data);
         else {
             if ((nodo.izquierdo == null) || (nodo.derecho == null)) {
                 nodo = (nodo.izquierdo != null) ? nodo.izquierdo : nodo.derecho;
             } else {
-                NodoAVL temp = minValueNode(nodo.derecho);
+                NodoAVL temp = encontrarNodoMinimo(nodo.derecho);
                 nodo.data = temp.data;
-                nodo.derecho = eliminarRec(nodo.derecho, temp.data);
+                nodo.derecho = eliminarRecursivo(nodo.derecho, temp.data);
             }
         }
         if (nodo == null) return null;
@@ -123,23 +123,27 @@ public class ArbolAVL<T extends Comparable<T>> {
         return nodo;
     }
 
-    private NodoAVL minValueNode(NodoAVL nodo) {
-        NodoAVL current = nodo;
-        while (current.izquierdo != null) current = current.izquierdo;
-        return current;
+    private NodoAVL encontrarNodoMinimo(NodoAVL nodo) {
+        NodoAVL actual = nodo;
+        while (actual.izquierdo != null) {
+            actual = actual.izquierdo;
+        }
+        return actual;
     }
 
+    //Entrega los nodos del arbol en forma de lista
     public LinkedList<T> getDatosEnOrden() {
         LinkedList<T> lista = new LinkedList<>();
-        inOrderRec(raiz, lista);
+        inOrderRecursivo(raiz, lista);
         return lista;
     }
-
-    private void inOrderRec(NodoAVL nodo, LinkedList<T> lista) {
+    
+    //Recorre el arbol en "EnOrden" para agregarlos a la lista
+    private void inOrderRecursivo(NodoAVL nodo, LinkedList<T> lista) {
         if (nodo != null) {
-            inOrderRec(nodo.izquierdo, lista);
+            inOrderRecursivo(nodo.izquierdo, lista);
             lista.add(nodo.data);
-            inOrderRec(nodo.derecho, lista);
+            inOrderRecursivo(nodo.derecho, lista);
         }
     }
 }

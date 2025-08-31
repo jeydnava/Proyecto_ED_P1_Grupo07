@@ -1,5 +1,6 @@
 package proyectoaeropuerto;
 
+//representaría los arcos en el grafo
 public class Vuelo {
     private final Aeropuerto origen;
     private final Aeropuerto destino;
