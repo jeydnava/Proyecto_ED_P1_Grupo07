@@ -22,6 +22,7 @@ public class ArbolAVL<T extends Comparable<T>> {
         }
     }
 
+    //Metodos vistos en clase
     private int altura(NodoAVL n) {
         return (n == null) ? 0 : n.altura;
     }

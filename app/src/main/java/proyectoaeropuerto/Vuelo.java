@@ -30,4 +30,8 @@ public class Vuelo {
     public double getCosto() {
         return pesos.getCosto();
     }
+
+    public PesoVuelo getPeso() {
+        return pesos;
+    }
 }

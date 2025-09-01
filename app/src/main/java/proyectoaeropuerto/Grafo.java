@@ -76,6 +76,15 @@ public class Grafo<V, E> {
         }
     }
 
+    public void eliminarArista(V origenData, V destinoData, E peso) {
+        Nodo<V, E> origen = buscarNodo(origenData);
+        if (origen != null) {
+            origen.adyacentes.removeIf(arista -> 
+                arista.destino.data.equals(destinoData) && arista.peso.equals(peso)
+            );
+        }
+    }
+
     public int getNumeroDeConexiones(V data) {
         Nodo<V, E> nodo = buscarNodo(data);
         return (nodo != null) ? nodo.adyacentes.size() : 0;
@@ -157,5 +166,76 @@ public class Grafo<V, E> {
             }
         }
         return new Ruta(camino, nodoDestino.pesoAcumulado, criterio);
+    }
+
+    public List<Ruta> encontrarRutasAlternativas(V origenData, V destinoData, Ruta.Criterio criterio, int maxRutas) {
+        Nodo<V, E> nodoInicio = buscarNodo(origenData);
+        Nodo<V, E> nodoDestino = buscarNodo(destinoData);
+        List<Ruta> rutasEncontradas = new ArrayList<>();
+
+        if (nodoInicio == null || nodoDestino == null) {
+            return rutasEncontradas;
+        }
+
+        List<LinkedList<Nodo<V, E>>> todosLosCaminos = new ArrayList<>();
+        LinkedList<Nodo<V, E>> caminoActual = new LinkedList<>();
+        caminoActual.add(nodoInicio);
+
+        buscarCaminosDFS(nodoInicio, nodoDestino, caminoActual, todosLosCaminos);
+
+        for (LinkedList<Nodo<V, E>> camino : todosLosCaminos) {
+            LinkedList<Aeropuerto> aeropuertosEnRuta = new LinkedList<>();
+            double pesoTotal = 0.0;
+            Nodo<V, E> previo = null;
+
+            for (Nodo<V, E> paso : camino) {
+                aeropuertosEnRuta.add((Aeropuerto) paso.data);
+                if (previo != null) {
+                    Arista<V, E> arista = encontrarArista(previo, paso);
+                    if (arista != null) {
+                        pesoTotal += calcularPesoArista(arista, criterio);
+                    }
+                }
+                previo = paso;
+            }
+            rutasEncontradas.add(new Ruta(aeropuertosEnRuta, pesoTotal, criterio));
+        }
+
+        rutasEncontradas.sort(Comparator.comparingDouble(Ruta::getPesoTotal));
+        return rutasEncontradas.subList(0, Math.min(maxRutas, rutasEncontradas.size()));
+    }
+
+    private void buscarCaminosDFS(Nodo<V, E> actual, Nodo<V, E> destino, LinkedList<Nodo<V, E>> caminoActual, List<LinkedList<Nodo<V, E>>> todosLosCaminos) {
+        if (actual.equals(destino)) {
+            todosLosCaminos.add(new LinkedList<>(caminoActual));
+            return;
+        }
+
+        for (Arista<V, E> arista : actual.adyacentes) {
+            Nodo<V, E> vecino = arista.destino;
+            if (!caminoActual.contains(vecino)) {
+                caminoActual.addLast(vecino);
+                buscarCaminosDFS(vecino, destino, caminoActual, todosLosCaminos);
+                caminoActual.removeLast();
+            }
+        }
+    }
+
+    private Arista<V, E> encontrarArista(Nodo<V, E> origen, Nodo<V, E> destino) {
+        for (Arista<V, E> arista : origen.adyacentes) {
+            if (arista.destino.equals(destino)) {
+                return arista;
+            }
+        }
+        return null;
+    }
+
+    private double calcularPesoArista(Arista<V, E> arista, Ruta.Criterio criterio) {
+        PesoVuelo pesoVuelo = (PesoVuelo) arista.peso;
+        switch (criterio) {
+            case TIEMPO: return pesoVuelo.getTiempo();
+            case COSTO: return pesoVuelo.getCosto();
+            default: return pesoVuelo.getDistancia();
+        }
     }
 }
