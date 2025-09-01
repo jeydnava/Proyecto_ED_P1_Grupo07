@@ -76,6 +76,15 @@ public class Grafo<V, E> {
         }
     }
 
+    public void eliminarArista(V origenData, V destinoData, E peso) {
+        Nodo<V, E> origen = buscarNodo(origenData);
+        if (origen != null) {
+            origen.adyacentes.removeIf(arista -> 
+                arista.destino.data.equals(destinoData) && arista.peso.equals(peso)
+            );
+        }
+    }
+
     public int getNumeroDeConexiones(V data) {
         Nodo<V, E> nodo = buscarNodo(data);
         return (nodo != null) ? nodo.adyacentes.size() : 0;

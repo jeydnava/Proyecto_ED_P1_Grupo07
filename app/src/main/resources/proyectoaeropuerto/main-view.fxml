@@ -59,6 +59,7 @@
             <Button maxWidth="Infinity" onAction="#handleAnadirAeropuerto" text="Añadir Aeropuerto" />
             <Button maxWidth="Infinity" onAction="#handleAnadirVuelo" text="Añadir Vuelo" />
             <Button maxWidth="Infinity" onAction="#handleVerEstadisticas" text="Ver Estadísticas" />
+            <Button maxWidth="Infinity" onAction="#handleGestionarVuelos" text="Gestionar Vuelos" />
          </children>
          <padding>
             <Insets left="15.0" right="15.0" top="15.0" />

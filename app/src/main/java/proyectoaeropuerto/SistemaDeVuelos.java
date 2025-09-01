@@ -34,6 +34,30 @@ public class SistemaDeVuelos {
             redDeVuelos.agregarArista(origen, destino, new PesoVuelo(distancia, tiempo, costo));
         }
     }
+
+    public void editarAeropuerto(String codigoIATA, String nuevoNombre, String nuevaCiudad) {
+        Aeropuerto aeropuerto = getAeropuertoPorCodigo(codigoIATA);
+        if (aeropuerto != null) {
+            aeropuerto.setNombre(nuevoNombre);
+            aeropuerto.setCiudad(nuevaCiudad);
+            reescribirArchivoPersistencia();
+        }
+    }
+
+    public void editarVuelo(Vuelo vueloAntiguo, int nuevaDistancia, int nuevoTiempo, double nuevoCosto) {
+        if (vueloAntiguo == null) return;
+
+        // 1. Eliminar la arista antigua del grafo
+        PesoVuelo pesoAntiguo = new PesoVuelo(vueloAntiguo.getDistancia(), vueloAntiguo.getTiempo(), vueloAntiguo.getCosto());
+        redDeVuelos.eliminarArista(vueloAntiguo.getOrigen(), vueloAntiguo.getDestino(), pesoAntiguo);
+
+        // 2. Agregar la nueva arista al grafo
+        PesoVuelo pesoNuevo = new PesoVuelo(nuevaDistancia, nuevoTiempo, nuevoCosto);
+        redDeVuelos.agregarArista(vueloAntiguo.getOrigen(), vueloAntiguo.getDestino(), pesoNuevo);
+
+        // 3. Guardar el estado actualizado
+        reescribirArchivoPersistencia();
+    }
     
     // --- MÉTODOS DE CONSULTA ---
     public Aeropuerto getAeropuertoPorCodigo(String codigoIATA) {
@@ -46,6 +70,20 @@ public class SistemaDeVuelos {
 
     public List<Vuelo> getTodosLosVuelos() {
         return redDeVuelos.getTodosLosVuelos();
+    }
+
+    public List<Vuelo> getVuelosDeAeropuerto(String codigoIATA) {
+        List<Vuelo> vuelosDelAeropuerto = new ArrayList<>();
+        if (codigoIATA == null || codigoIATA.isEmpty()) {
+            return vuelosDelAeropuerto; // Return empty list if code is invalid
+        }
+        for (Vuelo vuelo : getTodosLosVuelos()) {
+            if (vuelo.getOrigen().getCodigoIATA().equals(codigoIATA) || 
+                vuelo.getDestino().getCodigoIATA().equals(codigoIATA)) {
+                vuelosDelAeropuerto.add(vuelo);
+            }
+        }
+        return vuelosDelAeropuerto;
     }
 
     public Ruta buscarRutaMasCorta(String codigoOrigen, String codigoDestino, Ruta.Criterio criterio) {
@@ -79,6 +117,13 @@ public class SistemaDeVuelos {
         if (aeropuerto == null) return;
         arbolAeropuertos.eliminar(aeropuerto);
         redDeVuelos.eliminarVertice(aeropuerto);
+        reescribirArchivoPersistencia();
+    }
+
+    public void eliminarVuelo(Vuelo vuelo) {
+        if (vuelo == null) return;
+        PesoVuelo peso = new PesoVuelo(vuelo.getDistancia(), vuelo.getTiempo(), vuelo.getCosto());
+        redDeVuelos.eliminarArista(vuelo.getOrigen(), vuelo.getDestino(), peso);
         reescribirArchivoPersistencia();
     }
 

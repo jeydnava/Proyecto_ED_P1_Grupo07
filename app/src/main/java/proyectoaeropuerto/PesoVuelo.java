@@ -1,5 +1,7 @@
 package proyectoaeropuerto;
 
+import java.util.Objects;
+
 public class PesoVuelo {
     final int distancia;
     final int tiempo;
@@ -21,5 +23,20 @@ public class PesoVuelo {
 
     public double getCosto() {
         return costo;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        PesoVuelo pesoVuelo = (PesoVuelo) o;
+        return distancia == pesoVuelo.distancia &&
+                tiempo == pesoVuelo.tiempo &&
+                Double.compare(pesoVuelo.costo, costo) == 0;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(distancia, tiempo, costo);
     }
 }
