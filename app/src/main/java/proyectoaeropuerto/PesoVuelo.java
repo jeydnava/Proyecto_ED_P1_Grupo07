@@ -6,11 +6,20 @@ public class PesoVuelo {
     final int distancia;
     final int tiempo;
     final double costo;
+    private int demanda;
 
     public PesoVuelo(int distancia, int tiempo, double costo) {
         this.distancia = distancia;
         this.tiempo = tiempo;
         this.costo = costo;
+        this.demanda = 0;
+    }
+
+    public PesoVuelo(int distancia, int tiempo, double costo, int demanda) {
+        this.distancia = distancia;
+        this.tiempo = tiempo;
+        this.costo = costo;
+        this.demanda = demanda;
     }
 
     public int getDistancia() {
@@ -23,6 +32,14 @@ public class PesoVuelo {
 
     public double getCosto() {
         return costo;
+    }
+
+    public int getDemanda() {
+        return demanda;
+    }
+
+    public void incrementarDemanda() {
+        this.demanda++;
     }
 
     @Override

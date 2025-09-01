@@ -8,7 +8,7 @@ public class Aeropuerto implements Comparable<Aeropuerto> {
     private String nombre;
     private String ciudad;
 
-    //Atributo a utlizar para mostrar los nodos en la app (clase ViewController)
+    //Atributo a utlizar para mostrar los nodos en la interfaz (clase ViewController)
     public float x, y;
 
     //Constructor

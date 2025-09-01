@@ -24,15 +24,31 @@ public class SistemaDeVuelos {
             Aeropuerto nuevoAeropuerto = new Aeropuerto(codigoIATA, nombre, ciudad);
             arbolAeropuertos.insertar(nuevoAeropuerto);
             redDeVuelos.agregarVertice(nuevoAeropuerto);
+            guardarEstado();
         }
     }
 
-    public void agregarVuelo(String codigoOrigen, String codigoDestino, int distancia, int tiempo, double costo) {
+    public void agregarVuelo(String codigoOrigen, String codigoDestino, int distancia, int tiempo, double costo, int demanda) {
         Aeropuerto origen = arbolAeropuertos.buscar(new Aeropuerto(codigoOrigen, "", ""));
         Aeropuerto destino = arbolAeropuertos.buscar(new Aeropuerto(codigoDestino, "", ""));
         if (origen != null && destino != null) {
-            redDeVuelos.agregarArista(origen, destino, new PesoVuelo(distancia, tiempo, costo));
+            redDeVuelos.agregarArista(origen, destino, new PesoVuelo(distancia, tiempo, costo, demanda));
+            guardarEstado();
         }
+    }
+
+    public void eliminarAeropuerto(Aeropuerto aeropuerto) {
+        if (aeropuerto == null) return;
+        arbolAeropuertos.eliminar(aeropuerto);
+        redDeVuelos.eliminarVertice(aeropuerto);
+        guardarEstado();
+    }
+
+    public void eliminarVuelo(Vuelo vuelo) {
+        if (vuelo == null) return;
+        PesoVuelo peso = new PesoVuelo(vuelo.getDistancia(), vuelo.getTiempo(), vuelo.getCosto(), vuelo.getPeso().getDemanda());
+        redDeVuelos.eliminarArista(vuelo.getOrigen(), vuelo.getDestino(), peso);
+        guardarEstado();
     }
 
     public void editarAeropuerto(String codigoIATA, String nuevoNombre, String nuevaCiudad) {
@@ -40,7 +56,7 @@ public class SistemaDeVuelos {
         if (aeropuerto != null) {
             aeropuerto.setNombre(nuevoNombre);
             aeropuerto.setCiudad(nuevaCiudad);
-            reescribirArchivoPersistencia();
+            guardarEstado();
         }
     }
 
@@ -48,15 +64,15 @@ public class SistemaDeVuelos {
         if (vueloAntiguo == null) return;
 
         // 1. Eliminar la arista antigua del grafo
-        PesoVuelo pesoAntiguo = new PesoVuelo(vueloAntiguo.getDistancia(), vueloAntiguo.getTiempo(), vueloAntiguo.getCosto());
+        PesoVuelo pesoAntiguo = new PesoVuelo(vueloAntiguo.getDistancia(), vueloAntiguo.getTiempo(), vueloAntiguo.getCosto(), vueloAntiguo.getPeso().getDemanda());
         redDeVuelos.eliminarArista(vueloAntiguo.getOrigen(), vueloAntiguo.getDestino(), pesoAntiguo);
 
         // 2. Agregar la nueva arista al grafo
-        PesoVuelo pesoNuevo = new PesoVuelo(nuevaDistancia, nuevoTiempo, nuevoCosto);
+        PesoVuelo pesoNuevo = new PesoVuelo(nuevaDistancia, nuevoTiempo, nuevoCosto, vueloAntiguo.getPeso().getDemanda());
         redDeVuelos.agregarArista(vueloAntiguo.getOrigen(), vueloAntiguo.getDestino(), pesoNuevo);
 
         // 3. Guardar el estado actualizado
-        reescribirArchivoPersistencia();
+        guardarEstado();
     }
     
     // --- MÉTODOS DE CONSULTA ---
@@ -75,7 +91,7 @@ public class SistemaDeVuelos {
     public List<Vuelo> getVuelosDeAeropuerto(String codigoIATA) {
         List<Vuelo> vuelosDelAeropuerto = new ArrayList<>();
         if (codigoIATA == null || codigoIATA.isEmpty()) {
-            return vuelosDelAeropuerto; // Return empty list if code is invalid
+            return vuelosDelAeropuerto;
         }
         for (Vuelo vuelo : getTodosLosVuelos()) {
             if (vuelo.getOrigen().getCodigoIATA().equals(codigoIATA) || 
@@ -89,10 +105,48 @@ public class SistemaDeVuelos {
     public Ruta buscarRutaMasCorta(String codigoOrigen, String codigoDestino, Ruta.Criterio criterio) {
         Aeropuerto origen = arbolAeropuertos.buscar(new Aeropuerto(codigoOrigen, "", ""));
         Aeropuerto destino = arbolAeropuertos.buscar(new Aeropuerto(codigoDestino, "", ""));
-        return redDeVuelos.encontrarRutaMasCorta(origen, destino, criterio);
+        Ruta ruta = redDeVuelos.encontrarRutaMasCorta(origen, destino, criterio);
+        if (ruta != null && !ruta.getAeropuertos().isEmpty()) {
+            incrementarDemandaRuta(ruta);
+        }
+        return ruta;
+    }
+
+    public List<Ruta> buscarRutasAlternativas(String codigoOrigen, String codigoDestino, Ruta.Criterio criterio, int maxRutas) {
+        Aeropuerto origen = arbolAeropuertos.buscar(new Aeropuerto(codigoOrigen, "", ""));
+        Aeropuerto destino = arbolAeropuertos.buscar(new Aeropuerto(codigoDestino, "", ""));
+        List<Ruta> rutas = redDeVuelos.encontrarRutasAlternativas(origen, destino, criterio, maxRutas);
+        for (Ruta ruta : rutas) {
+            incrementarDemandaRuta(ruta);
+        }
+        return rutas;
+    }
+
+    private void incrementarDemandaRuta(Ruta ruta) {
+        List<Aeropuerto> aeropuertos = ruta.getAeropuertos();
+        if (aeropuertos.size() < 2) return;
+
+        for (int i = 0; i < aeropuertos.size() - 1; i++) {
+            Aeropuerto origen = aeropuertos.get(i);
+            Aeropuerto destino = aeropuertos.get(i + 1);
+            // Encontrar el vuelo específico en el grafo y actualizar su peso
+            for (Vuelo v : redDeVuelos.getTodosLosVuelos()) {
+                if (v.getOrigen().equals(origen) && v.getDestino().equals(destino)) {
+                    v.getPeso().incrementarDemanda();
+                    break;
+                }
+            }
+        }
+        guardarEstado();
     }
     
+
     // --- MÉTODOS DE ESTADÍSTICAS ---
+    public List<Vuelo> getVuelosMasDemandados(int n) {
+        List<Vuelo> todosLosVuelos = getTodosLosVuelos();
+        todosLosVuelos.sort(Comparator.comparingInt((Vuelo v) -> v.getPeso().getDemanda()).reversed());
+        return todosLosVuelos.subList(0, Math.min(n, todosLosVuelos.size()));
+    }
 
     public String getEstadisticasConexiones() {
         StringBuilder sb = new StringBuilder();
@@ -111,45 +165,31 @@ public class SistemaDeVuelos {
         return Collections.min(getTodosLosAeropuertos(), Comparator.comparingInt(redDeVuelos::getNumeroDeConexiones));
     }
 
-    // --- MÉTODOS DE PERSISTENCIA (CON CAMBIOS IMPORTANTES) ---
-    
-    public void eliminarAeropuerto(Aeropuerto aeropuerto) {
-        if (aeropuerto == null) return;
-        arbolAeropuertos.eliminar(aeropuerto);
-        redDeVuelos.eliminarVertice(aeropuerto);
-        reescribirArchivoPersistencia();
-    }
-
-    public void eliminarVuelo(Vuelo vuelo) {
-        if (vuelo == null) return;
-        PesoVuelo peso = new PesoVuelo(vuelo.getDistancia(), vuelo.getTiempo(), vuelo.getCosto());
-        redDeVuelos.eliminarArista(vuelo.getOrigen(), vuelo.getDestino(), peso);
-        reescribirArchivoPersistencia();
-    }
-
+    // --- MÉTODOS DE PERSISTENCIA ---
     public void cargarDatosDesdeArchivos() {
-        // Carga desde el archivo de recursos (el que está dentro del programa)
-        try (InputStream inputStream = SistemaDeVuelos.class.getResourceAsStream("/proyectoaeropuerto/datos_vuelos.csv");
-            BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
-            if (inputStream == null) {
-                System.err.println("¡Error Crítico! No se encontró el archivo de recursos 'datos_vuelos.csv'");
-                return;
+        File archivoPersistencia = new File(ARCHIVO_PERSISTENCIA);
+        if (archivoPersistencia.exists()) {
+            // Si el archivo de persistencia existe, se carga desde él.
+            try (InputStream fis = new FileInputStream(archivoPersistencia);
+                BufferedReader reader = new BufferedReader(new InputStreamReader(fis))) {
+                cargarDatos(reader);
+            } catch (IOException e) {
+                System.err.println("Error al cargar datos desde persistencia:");
+                e.printStackTrace();
             }
-            cargarDatos(reader);
-        } catch (IOException | NullPointerException e) {
-            System.err.println("Error al cargar datos desde recursos:");
-            e.printStackTrace();
-        }
-
-        // Carga desde el archivo de persistencia (el que guarda los cambios del usuario)
-        try (InputStream fis = new FileInputStream(ARCHIVO_PERSISTENCIA);
-            BufferedReader reader = new BufferedReader(new InputStreamReader(fis))) {
-            cargarDatos(reader);
-        } catch (FileNotFoundException e) {
-            System.out.println("No se encontró archivo de persistencia, se creará uno nuevo al guardar.");
-        } catch (IOException e) {
-            System.err.println("Error al cargar datos desde persistencia:");
-            e.printStackTrace();
+        } else {
+            // Si no, se carga desde el archivo de recursos (datos iniciales).
+            try (InputStream inputStream = SistemaDeVuelos.class.getResourceAsStream("/proyectoaeropuerto/datos_vuelos.csv");
+                BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
+                if (inputStream == null) {
+                    System.err.println("¡Error Crítico! No se encontró el archivo de recursos 'datos_vuelos.csv'");
+                    return;
+                }
+                cargarDatos(reader);
+            } catch (IOException | NullPointerException e) {
+                System.err.println("Error al cargar datos desde recursos:");
+                e.printStackTrace();
+            }
         }
     }
 
@@ -172,47 +212,32 @@ public class SistemaDeVuelos {
             int distancia = Integer.parseInt(datosVuelo[3].trim());
             int tiempo = Integer.parseInt(datosVuelo[4].trim());
             double costo = Double.parseDouble(datosVuelo[5].trim());
-            agregarVuelo(origen, destino, distancia, tiempo, costo);
+            int demanda = (datosVuelo.length > 6) ? Integer.parseInt(datosVuelo[6].trim()) : 0;
+            agregarVuelo(origen, destino, distancia, tiempo, costo, demanda);
         }
     }
 
-    public void guardarAeropuertoEnArchivo(Aeropuerto aeropuerto) {
-        String linea = "AEROPUERTO," + aeropuerto.getCodigoIATA() + "," + aeropuerto.getNombre() + "," + aeropuerto.getCiudad() + "\n";
-        escribirEnArchivo(linea, true); // true para añadir al final
-    }
-
-    public void guardarVueloEnArchivo(Vuelo vuelo) {
-        String linea = "VUELO," + vuelo.getOrigen().getCodigoIATA() + "," + vuelo.getDestino().getCodigoIATA() + "," + vuelo.getDistancia() + "," + vuelo.getTiempo() + "," + vuelo.getCosto() + "\n";
-        escribirEnArchivo(linea, true); // true para añadir al final
-    }
-
-    private void escribirEnArchivo(String data, boolean append) {
-        // Usamos try-with-resources para asegurar que el archivo se cierre
-        try (FileWriter fw = new FileWriter(ARCHIVO_PERSISTENCIA, append);
-            BufferedWriter bw = new BufferedWriter(fw);
-            PrintWriter out = new PrintWriter(bw)) {
-            out.print(data);
-        } catch (IOException e) {
-            System.err.println("Error al escribir en archivo de persistencia:");
-            e.printStackTrace();
-        }
-    }
-    
-    private void reescribirArchivoPersistencia() {
+    public void guardarEstado() {
         List<String> lineas = new ArrayList<>();
         for (Aeropuerto apt : getTodosLosAeropuertos()) {
             lineas.add("AEROPUERTO," + apt.getCodigoIATA() + "," + apt.getNombre() + "," + apt.getCiudad());
         }
         for (Vuelo vuelo : getTodosLosVuelos()) {
-            lineas.add("VUELO," + vuelo.getOrigen().getCodigoIATA() + "," + vuelo.getDestino().getCodigoIATA() + "," + vuelo.getDistancia() + "," + vuelo.getTiempo() + "," + vuelo.getCosto());
+            lineas.add("VUELO," + vuelo.getOrigen().getCodigoIATA() + "," + vuelo.getDestino().getCodigoIATA() + "," + vuelo.getDistancia() + "," + vuelo.getTiempo() + "," + vuelo.getCosto() + "," + vuelo.getPeso().getDemanda());
         }
 
-        // Sobrescribimos el archivo con los nuevos datos
-        try (FileWriter fw = new FileWriter(ARCHIVO_PERSISTENCIA, false); // false para sobrescribir
-            BufferedWriter bw = new BufferedWriter(fw);
-            PrintWriter out = new PrintWriter(bw)) {
-            for (String linea : lineas) {
-                out.println(linea);
+        try {
+            File archivo = new File(ARCHIVO_PERSISTENCIA);
+            File parentDir = archivo.getParentFile();
+            if (parentDir != null && !parentDir.exists()) {
+                parentDir.mkdirs();
+            }
+            try (FileWriter fw = new FileWriter(archivo, false);
+                BufferedWriter bw = new BufferedWriter(fw);
+                PrintWriter out = new PrintWriter(bw)) {
+                for (String linea : lineas) {
+                    out.println(linea);
+                }
             }
         } catch (IOException e) {
             System.err.println("Error al reescribir archivo de persistencia:");

@@ -18,6 +18,10 @@ public class Ruta {
         return aeropuertos;
     }
 
+    public double getPesoTotal() {
+        return pesoTotal;
+    }
+
     @Override
     public String toString() {
         if (aeropuertos == null || aeropuertos.isEmpty() || pesoTotal == Double.POSITIVE_INFINITY) {
